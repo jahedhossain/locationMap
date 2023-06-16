@@ -13,39 +13,62 @@ document.addEventListener("DOMContentLoaded", () => {
   listGroupSearch.addEventListener("keyup", (e) => {
     const searchString = e.target.value.toLowerCase();
 
-    // if activeFilterList length 1
-    if (activeFilterList.length === 1) {
-      const filteredCharacters = demoData.districts.filter((character) => {
-        return character.name.toLowerCase().includes(searchString);
-      });
-      renderList(filteredCharacters, listContainer);
-    }
-
-    // if activeFilterList length 2
-    if (activeFilterList.length === 2) {
-      const districts = demoData.districts.find(
-        (district) => district.id === activeFilterList[1].id
-      );
-      const filteredCharacters = districts.policeStations.filter(
-        (character) => {
-          return character.name.toLowerCase().includes(searchString);
+    // if searchString is empty
+    if (searchString == "") {
+      if (activeFilterList.length === 1) {
+        renderList(demoData.districts, listContainer);
+        renderBreadcrumb(activeFilterList, listFilter);
+      }
+      if (activeFilterList.length === 2) {
+        //districts filter
+        const districts = demoData.districts.find(
+          (district) => district.id === activeFilterList[1].id
+        );
+        renderList(districts.policeStations, listContainer);
+        renderBreadcrumb(activeFilterList, listFilter);
+      }
+      if (activeFilterList.length === 3) {
+        //districts filter
+        const districts = demoData.districts.find(
+          (district) => district.id ===  activeFilterList[1].id
+        );
+        //policeStations filter
+        const policeStations = districts.policeStations.find(
+          (policeStation) => policeStation.id === activeFilterList[2].id
+        );
+        const areaList = policeStations.area.map((area) => {
+          return {
+            ...area,
+            policestation: activeFilterList[1].name + ", " + activeFilterList[2].name,
+          };
+        });
+        renderTable(areaList, listContainer);
+        renderBreadcrumb(activeFilterList, listFilter);
+      }
+    } else {
+      //  Search districts, policestations, area
+      const searchList = [];
+      demoData.districts.forEach((district) => {
+        if (district.policeStations.length > 0) {
+          district.policeStations.forEach((policeStation) => {
+            if (policeStation.area.length > 0) {
+              policeStation.area.forEach((area) => {
+                if (
+                  area.name.toLowerCase().includes(searchString) ||
+                  policeStation.name.toLowerCase().includes(searchString) ||
+                  district.name.toLowerCase().includes(searchString)
+                ) {
+                  searchList.push({
+                    ...area,
+                    policestation: policeStation.name + ", " + district.name,
+                  });
+                }
+              });
+            }
+          });
         }
-      );
-      renderList(filteredCharacters, listContainer);
-    }
-
-    // if activeFilterList length 3
-    if (activeFilterList.length === 3) {
-      const districts = demoData.districts.find(
-        (district) => district.id === activeFilterList[1].id
-      );
-      const policeStations = districts.policeStations.find(
-        (policeStation) => policeStation.id === activeFilterList[2].id
-      );
-      const filteredCharacters = policeStations.area.filter((character) => {
-        return character.name.toLowerCase().includes(searchString);
       });
-      renderTable(filteredCharacters, listContainer);
+      renderTable(searchList, listContainer);
     }
   });
 
@@ -71,13 +94,24 @@ document.addEventListener("DOMContentLoaded", () => {
       const tr = document.createElement("tr");
       const td1 = document.createElement("td");
       td1.scope = "row";
-      td1.innerText = item.name;
+      td1.innerText = item.name || "";
       const td2 = document.createElement("td");
-      td2.innerText = item.name;
+      td2.innerText = item.policestation || "";
       tr.appendChild(td1);
       tr.appendChild(td2);
       tbody.appendChild(tr);
     });
+
+    // list not found
+    if (list.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 2;
+      td.innerText = "Data not found";
+      td.classList.add("text-center");
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
     table.appendChild(tbody);
     container.appendChild(table);
   };
@@ -120,7 +154,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const policeStations = districts.policeStations.find(
             (policeStation) => policeStation.id === item.id
           );
-          renderTable(policeStations.area, listContainer);
+          const areaList = policeStations.area.map((area) => {
+            return {
+              ...area,
+              policestation: activeFilterList[1].name + ", " + activeFilterList[2].name,
+            };
+          });
+
+          renderTable(areaList, listContainer);
           renderBreadcrumb(activeFilterList, listFilter);
         }
       };
@@ -143,7 +184,13 @@ document.addEventListener("DOMContentLoaded", () => {
       listItem.onclick = () => {
         if (activeFilterList.length === 2) {
           activeFilterList[2] = item;
-          renderTable(item.area, listContainer);
+          const areaList = item.area.map((area) => {
+            return {
+              ...area,
+              policestation: activeFilterList[1].name + ", " + item.name,
+            };
+          });
+          renderTable(areaList, listContainer);
           renderBreadcrumb(activeFilterList, listFilter);
         } else {
           if (activeFilterList.length === 1) {
@@ -153,6 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
       };
+
       return listItem;
     });
     // Append the list items to the container
